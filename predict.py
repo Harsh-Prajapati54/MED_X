@@ -54,6 +54,9 @@ def load_model(model_path: str) -> nn.Module:
 
     model.to(DEVICE)
     model.eval()
+    for module in model.modules():
+        if isinstance(module, nn.ReLU):
+            module.inplace = False
     print(f"[✓] Model loaded from '{model_path}' | device: {DEVICE}")
     return model
 
@@ -110,21 +113,21 @@ class GradCAM:
         self.gradients   = None
         self.activations = None
 
-        target_layer = model.features.norm5
+        target_layer = model.features.denseblock4.denselayer16.conv2
         target_layer.register_forward_hook(self._save_activation)
         target_layer.register_full_backward_hook(self._save_gradient)
 
     def _save_activation(self, module, input, output):
-        self.activations = output
+        self.activations = output.clone()
 
     def _save_gradient(self, module, grad_input, grad_output):
-        self.gradients = grad_output[0]
+        self.gradients = grad_output[0].clone()
 
     def generate(self, input_tensor: torch.Tensor, class_idx: int) -> np.ndarray:
         self.model.eval()
         output = self.model(input_tensor)
-        self.model.zero_grad()
-        output[0, class_idx].backward()
+        self.model.zero_grad(set_to_none=True)
+        output[0, class_idx].backward(retain_graph=True)
 
         weights = torch.mean(self.gradients, dim=(2, 3), keepdim=True)
         cam     = torch.sum(weights * self.activations, dim=1).squeeze()
