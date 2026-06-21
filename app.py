@@ -56,7 +56,6 @@ st.markdown("""
             
 st.title("Medical-X")
 st.write("Welcome to the Medical-X application! This app allows you to analyze medical X-ray images and predict the chest disease using machine learning models.")
-
 st.set_page_config(
     page_title="Med-X · Chest X-ray Analysis",
     page_icon="🫁",
